@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kaycee Udyog</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-neutral-50 flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-neutral-200">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+      <h1 class="text-xl text-neutral-900">Kaycee Udyog</h1>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 flex items-start justify-center px-4 pt-20 md:pt-32">
+    <div class="w-full max-w-md">
+      <div class="mb-8">
+        <h2 class="text-2xl text-neutral-900 tracking-tight">Search Product</h2>
+      </div>
+
+      <!-- Search Input + Clear Button -->
+      <div class="mb-6 flex space-x-2">
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Enter product keyword + size (e.g. chicken 3)" 
+          class="flex-1 px-5 py-4 text-base bg-white border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-shadow placeholder:text-neutral-400"
+        />
+        <button
+          id="clearBtn"
+          class="px-4 py-2 bg-neutral-200 text-neutral-700 rounded-xl hover:bg-neutral-300 transition"
+        >
+          Clear
+        </button>
+      </div>
+
+      <div id="resultContainer"></div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-neutral-200 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 py-6">
+      <p class="text-sm text-neutral-500 text-center">© 2026 Kaycee Udyog</p>
+    </div>
+  </footer>
+
+  <script>
+    let products = [];
+
+    async function loadProducts() {
+      // ✅ Use your published CSV link
+      const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTrmYy3WKlRKGnozK9eoC2UE-vO_XTA0FU02bAff2kkiP2phzODk7kHyxf9eX_ZwaLvVVXTfiKL5Gm4/pub?output=csv";
+      const response = await fetch(url);
+      const text = await response.text();
+
+      // Split CSV into rows
+      const rows = text.split("\n").map(r => r.split(","));
+
+      // Skip header row, map into product objects
+      products = rows.slice(1).map(row => ({
+        name: row[0] || "",
+        packing: row[1] || "",
+        mrp: row[2] || "",
+        price: row[3] || ""
+      }));
+
+      console.log("Loaded products:", products);
+    }
+
+    function normalize(str) {
+      return str.toLowerCase().replace(/[^a-z0-9 ]/g, " ");
+    }
+
+    function handleSearch(value) {
+      const query = normalize(value.trim());
+      const resultContainer = document.getElementById('resultContainer');
+      resultContainer.innerHTML = '';
+
+      if (!query) return;
+
+      const searchTerms = query.split(/\s+/).filter(Boolean);
+
+      // ✅ If one word → show all matches
+      if (searchTerms.length === 1) {
+        const matches = products.filter(product => {
+          const productLower = normalize(product.name);
+          return productLower.includes(searchTerms[0]);
+        });
+
+        if (matches.length > 0) {
+          resultContainer.innerHTML = matches.map(p => `
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-100 mb-4">
+              <h3 class="text-base text-neutral-900">${p.name}</h3>
+              <p class="text-sm text-neutral-500 mt-1">${p.packing}</p>
+              <div class="text-sm text-neutral-600">MRP: ₹${p.mrp}</div>
+              <div class="text-2xl text-neutral-900">Selling Price: ₹${p.price}</div>
+            </div>
+          `).join('');
+        } else {
+          resultContainer.innerHTML = `<div class="text-center py-8"><p class="text-sm text-neutral-400">No result</p></div>`;
+        }
+        return;
+      }
+
+      // ✅ If two words → show first exact match
+      if (searchTerms.length >= 2) {
+        const found = products.find(product => {
+          const productLower = normalize(product.name);
+          return searchTerms.every(term => productLower.includes(term));
+        });
+
+        if (found) {
+          resultContainer.innerHTML = `
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-100">
+              <h3 class="text-base text-neutral-900">${found.name}</h3>
+              <p class="text-sm text-neutral-500 mt-1">${found.packing}</p>
+              <div class="text-sm text-neutral-600">MRP: ₹${found.mrp}</div>
+              <div class="text-2xl text-neutral-900">Selling Price: ₹${found.price}</div>
+            </div>
+          `;
+        } else {
+          resultContainer.innerHTML = `<div class="text-center py-8"><p class="text-sm text-neutral-400">No result</p></div>`;
+        }
+      }
+    }
+
+    document.getElementById('searchInput').addEventListener('input', (e) => handleSearch(e.target.value));
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('resultContainer').innerHTML = '';
+      document.getElementById('searchInput').focus();
+    });
+
+    function setExample(example) {
+      document.getElementById('searchInput').value = example;
+      handleSearch(example);
+    }
+
+    loadProducts();
+  </script>
+</body>
+</html>
