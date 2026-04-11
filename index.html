@@ -143,22 +143,22 @@
         return;
       }
 
-      // ✅ If two words → show first exact match
+      // ✅ If two or more words → show ALL matches
       if (searchTerms.length >= 2) {
-        const found = products.find(product => {
+        const matches = products.filter(product => {
           const productLower = normalize(product.name);
           return searchTerms.every(term => productLower.includes(term));
         });
 
-        if (found) {
-          resultContainer.innerHTML = `
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-100">
-              <h3 class="text-base text-neutral-900">${found.name}</h3>
-              <p class="text-sm text-neutral-500 mt-1">${found.packing}</p>
-              <div class="text-sm text-neutral-600">MRP: ₹${found.mrp}</div>
-              <div class="text-2xl text-neutral-900">Selling Price: ₹${found.price}</div>
+        if (matches.length > 0) {
+          resultContainer.innerHTML = matches.map(p => `
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-100 mb-4">
+              <h3 class="text-base text-neutral-900">${p.name}</h3>
+              <p class="text-sm text-neutral-500 mt-1">${p.packing}</p>
+              <div class="text-sm text-neutral-600">MRP: ₹${p.mrp}</div>
+              <div class="text-2xl text-neutral-900">Selling Price: ₹${p.price}</div>
             </div>
-          `;
+          `).join('');
         } else {
           resultContainer.innerHTML = `<div class="text-center py-8"><p class="text-sm text-neutral-400">No result</p></div>`;
         }
