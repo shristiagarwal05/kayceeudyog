@@ -71,10 +71,13 @@
     const EMPLOYEES = ["siddarth", "shristi"];
 
     function checkLogin() {
-      const name = document.getElementById("usernameInput").value.trim().toLowerCase();
+      const nameInput = document.getElementById("usernameInput").value.trim();
       const pass = document.getElementById("passwordInput").value.trim();
 
-      // Generate expected password: first 4 letters of name + "_123"
+      // ✅ Employee name case-insensitive
+      const name = nameInput.toLowerCase();
+
+      // Password rule: first 4 letters of lowercase name + "_123"
       const expectedPassword = name.slice(0,4) + "_123";
 
       if (EMPLOYEES.includes(name) && pass === expectedPassword) {
@@ -97,13 +100,23 @@
       // Split CSV into rows
       const rows = text.split("\n").map(r => r.split(","));
 
-      // Skip header row, map into product objects
-      products = rows.slice(1).map(row => ({
-        name: row[0] || "",
-        packing: row[1] || "",
-        mrp: row[2] || "",
-        price: row[3] || ""
-      }));
+      // ✅ Robust parsing: skip header, ignore blank rows, strip quotes, remove trailing commas
+      products = rows.slice(1)
+        .filter(row => row[0]) // only keep rows with Item name
+        .map(row => {
+          const clean = (val) => (val || "")
+            .replace(/^"|"$/g, '')   // remove wrapping quotes
+            .replace(/""/g,'"')      // fix doubled quotes
+            .trim();
+
+          return {
+            name: clean(row[0]),
+            packing: clean(row[1]),
+            mrp: clean(row[2]),
+            // ✅ Only take the first non-empty value after column 3
+            price: clean(row.slice(3).find(v => v && v.trim()))
+          };
+        });
 
       console.log("Loaded products:", products);
     }
@@ -121,47 +134,23 @@
 
       const searchTerms = query.split(/\s+/).filter(Boolean);
 
-      // ✅ If one word → show all matches
-      if (searchTerms.length === 1) {
-        const matches = products.filter(product => {
-          const productLower = normalize(product.name);
-          return productLower.includes(searchTerms[0]);
-        });
+      // ✅ Search across both name and packing fields
+      const matches = products.filter(product => {
+        const productText = normalize(product.name + " " + product.packing);
+        return searchTerms.every(term => productText.includes(term));
+      });
 
-        if (matches.length > 0) {
-          resultContainer.innerHTML = matches.map(p => `
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-100 mb-4">
-              <h3 class="text-base text-neutral-900">${p.name}</h3>
-              <p class="text-sm text-neutral-500 mt-1">${p.packing}</p>
-              <div class="text-sm text-neutral-600">MRP: ₹${p.mrp}</div>
-              <div class="text-2xl text-neutral-900">Selling Price: ₹${p.price}</div>
-            </div>
-          `).join('');
-        } else {
-          resultContainer.innerHTML = `<div class="text-center py-8"><p class="text-sm text-neutral-400">No result</p></div>`;
-        }
-        return;
-      }
-
-      // ✅ If two or more words → show ALL matches
-      if (searchTerms.length >= 2) {
-        const matches = products.filter(product => {
-          const productLower = normalize(product.name);
-          return searchTerms.every(term => productLower.includes(term));
-        });
-
-        if (matches.length > 0) {
-          resultContainer.innerHTML = matches.map(p => `
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-100 mb-4">
-              <h3 class="text-base text-neutral-900">${p.name}</h3>
-              <p class="text-sm text-neutral-500 mt-1">${p.packing}</p>
-              <div class="text-sm text-neutral-600">MRP: ₹${p.mrp}</div>
-              <div class="text-2xl text-neutral-900">Selling Price: ₹${p.price}</div>
-            </div>
-          `).join('');
-        } else {
-          resultContainer.innerHTML = `<div class="text-center py-8"><p class="text-sm text-neutral-400">No result</p></div>`;
-        }
+      if (matches.length > 0) {
+        resultContainer.innerHTML = matches.map(p => `
+          <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-100 mb-4">
+            <h3 class="text-base text-neutral-900">${p.name}</h3>
+            <p class="text-sm text-neutral-500 mt-1">${p.packing}</p>
+            <div class="text-sm text-neutral-600">MRP: ₹${p.mrp}</div>
+            <div class="text-2xl text-neutral-900">Selling Price: ₹${p.price}</div>
+          </div>
+        `).join('');
+      } else {
+        resultContainer.innerHTML = `<div class="text-center py-8"><p class="text-sm text-neutral-400">No result</p></div>`;
       }
     }
 
