@@ -11,8 +11,8 @@
   <!-- Login Screen -->
   <div id="loginScreen" class="flex-1 flex items-center justify-center">
     <div class="bg-white p-8 rounded-xl shadow-md w-full max-w-sm">
-      <h2 class="text-xl text-neutral-900 mb-4">Employee Login</h2>
-      <input id="usernameInput" type="text" placeholder="Employee name"
+      <h2 class="text-xl text-neutral-900 mb-4">Member Login</h2>
+      <input id="usernameInput" type="text" placeholder="Member name"
         class="w-full px-4 py-3 border border-neutral-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-neutral-900" />
       <input id="passwordInput" type="password" placeholder="Password"
         class="w-full px-4 py-3 border border-neutral-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-neutral-900" />
@@ -113,8 +113,8 @@
             name: clean(row[0]),
             packing: clean(row[1]),
             mrp: clean(row[2]),
-            // ✅ Only take the first non-empty value after column 3
-            price: clean(row.slice(3).find(v => v && v.trim()))
+            price: clean(row[3]),
+            unit: clean(row[4]) // ✅ new Unit column
           };
         });
 
@@ -134,24 +134,57 @@
 
       const searchTerms = query.split(/\s+/).filter(Boolean);
 
-      // ✅ Search across both name and packing fields
-      const matches = products.filter(product => {
-        const productText = normalize(product.name + " " + product.packing);
-        return searchTerms.every(term => productText.includes(term));
-      });
+      // ✅ Single word → show all matches
+      if (searchTerms.length === 1) {
+        const matches = products.filter(product => {
+          const productText = normalize(product.name + " " + product.packing);
+          return productText.includes(searchTerms[0]);
+        });
 
-      if (matches.length > 0) {
-        resultContainer.innerHTML = matches.map(p => `
-          <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-100 mb-4">
-            <h3 class="text-base text-neutral-900">${p.name}</h3>
-            <p class="text-sm text-neutral-500 mt-1">${p.packing}</p>
-            <div class="text-sm text-neutral-600">MRP: ₹${p.mrp}</div>
-            <div class="text-2xl text-neutral-900">Selling Price: ₹${p.price}</div>
-          </div>
-        `).join('');
-      } else {
-        resultContainer.innerHTML = `<div class="text-center py-8"><p class="text-sm text-neutral-400">No result</p></div>`;
+        if (matches.length > 0) {
+          resultContainer.innerHTML = matches.map(p => productCard(p)).join('');
+        } else {
+          resultContainer.innerHTML = `<div class="text-center py-8"><p class="text-sm text-neutral-400">No result</p></div>`;
+        }
+        return;
       }
+
+      // ✅ Multi-word → exact phrase first, then fallback
+      if (searchTerms.length >= 2) {
+        const exactMatches = products.filter(product => {
+          const productText = normalize(product.name + " " + product.packing);
+          return productText.includes(query); // exact phrase match
+        });
+
+        if (exactMatches.length > 0) {
+          resultContainer.innerHTML = exactMatches.map(p => productCard(p)).join('');
+          return;
+        }
+
+        // fallback: all keywords must match
+        const matches = products.filter(product => {
+          const productText = normalize(product.name + " " + product.packing);
+          return searchTerms.every(term => productText.includes(term));
+        });
+
+        if (matches.length > 0) {
+          resultContainer.innerHTML = matches.map(p => productCard(p)).join('');
+        } else {
+          resultContainer.innerHTML = `<div class="text-center py-8"><p class="text-sm text-neutral-400">No result</p></div>`;
+        }
+      }
+    }
+
+    function productCard(p) {
+      return `
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-100 mb-4">
+          <h3 class="text-base text-neutral-900">${p.name}</h3>
+          <p class="text-sm text-neutral-500 mt-1">${p.packing}</p>
+          <div class="text-sm text-neutral-600">MRP: ₹${p.mrp}</div>
+          <div class="text-2xl text-neutral-900">Selling Price: ₹${p.price}</div>
+          <div class="text-sm text-neutral-700 mt-1">Unit: ${p.unit}</div>
+        </div>
+      `;
     }
 
     document.getElementById('searchInput').addEventListener('input', (e) => handleSearch(e.target.value));
